@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# determine if a valid number of arguments are given
+case $# in 
+	0) dir=. ;;
+	1) dir=$1 ;;
+	*) echo "Usage: showDir [ dir-name ]" >&2
+	   exit 1 ;;
+esac
+
+# determine if the argument given is a directory
+if [ ! -d $dir ]
+then
+	echo "$1 is not a valid directory name" >&2
+	exit 1
+fi
+
+# get the absolute path
+cd $dir
+path=$(pwd)
+
+# split up the absolute path
+newpath="/"$(echo "$path" | sed 's/\// /g')
+
+# declare variables for a constructed path and a flag
+constructed="/"
+flag=1
+
+#clear screen before output is displayed
+clear
+
+# display header
+echo "  Owner   Group   Other   Filename"
+echo "  -----   -----   -----   --------"
+
+for i in $newpath
+do
+	if [ $flag -eq 1 ]
+	then
+		((flag=flag-1))
+
+		# get the permissions for the directory
+		ugo=$(ls -ld / | cut -d' ' -f1 | sed 's/^.//g' | sed 's/.$//g')
+
+	else
+		constructed+=$i"/"
+
+		# get the permissions for the directory
+		cd $constructed
+		ugo=$(ls -ld | cut -d' ' -f1 | sed 's/^.//g')
+
+	fi
+
+	# split the permissions up by user (owner), group, and other
+	u=$(echo "$ugo" | sed 's/......$//g')
+	g=$(echo "$ugo" | sed 's/^...//g' | sed 's/...$//g')
+	o=$(echo "$ugo" | sed 's/^......//g')
+	# for formatting each of the above
+	newu=$(echo "$u" | sed 's/\(.\{1\}\)/\1 /g')
+	newg=$(echo "$g" | sed 's/\(.\{1\}\)/\1 /g')
+	newo=$(echo "$o" | sed 's/\(.\{1\}\)/\1 /g')
+
+	# turn highlighting on if others have no permissions
+	if [ "$o" = "---" ]
+	then
+		tput smso
+	fi
+
+	# display info
+	echo "d $newu  $newg  $newo  $i"
+
+	# turn off highlighting
+	tput rmso
+done
